@@ -6,11 +6,13 @@ import instructions
 class Argument:
     label: str = None
     immediate: int = None
+    offset: int = None
 
     @classmethod
-    def from_label(cls, label: str):
+    def from_label(cls, label: str, offset: int = 0):
         argument = Argument()
         argument.label = label
+        argument.offset = offset
         return argument
 
     @classmethod
@@ -23,10 +25,17 @@ class Argument:
         return self.label is not None
 
     def __repr__(self) -> str:
-        return self.label if self.is_label() else str(self.immediate)
+        if self.is_label():
+            suffix = ''
+            if self.offset != 0:
+                sign = '+' if self.offset > 0 else '-'
+                suffix = f'{sign}{self.offset}'
+            return f'{self.label}{suffix}'
+        else:
+            return str(self.immediate)
 
     def __eq__(self, other):
-        return self.label == other.label and self.immediate == other.immediate
+        return self.label == other.label and self.immediate == other.immediate and self.offset == other.offset
 
 
 class AsmLine:
