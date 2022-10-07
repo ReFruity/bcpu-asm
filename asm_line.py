@@ -75,6 +75,16 @@ class AsmLine:
                self.address == other.address and \
                self.label == other.label
 
+    def __copy__(self):
+        result = Argument()
+        result.data = self.data
+        result.mnemonic = self.mnemonic
+        result.argument = self.argument
+        result.address = self.address
+        result.label = self.label
+
+        return result
+
 
 def parse_argument(instruction: str) -> Optional[Argument]:
     split_instruction = instruction.split(' ')
@@ -101,12 +111,17 @@ def is_instruction(line: str) -> bool:
     return line.split(' ')[0] in instructions.MNEMONICS
 
 
+def is_alias(line: str) -> bool:
+    return line in instructions.ALIASES.keys()
+
+
 def asm_line_to_int(asm_line: AsmLine) -> int:
     if asm_line.is_data():
         return asm_line.data
     else:
         opcode = instructions.MNEMONICS.index(asm_line.mnemonic)
-        instruction = opcode << 4 + asm_line.argument.immediate
+        argument = 0 if asm_line.argument is None else asm_line.argument.immediate
+        instruction = (opcode << 4) + argument
         return instruction
 
 

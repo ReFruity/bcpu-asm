@@ -1,8 +1,9 @@
 import sys
-from typing import List
+from typing import List, Any
 
 import instructions
-from asm_line import AsmLine, is_instruction, parse_argument, is_data, is_label, Argument, to_machine_code
+from asm_line import AsmLine, is_instruction, parse_argument, is_data, is_label, Argument, to_machine_code, is_alias
+from util import split_list
 
 
 class AssemblyError(Exception):
@@ -62,6 +63,10 @@ def parse_asm_lines(lines: List[str]) -> List[AsmLine]:
             label = None
         elif is_label(line):
             label = line
+        elif is_alias(line):
+            alias_lines = instructions.ALIASES[line]
+            alias_asm_lines = parse_asm_lines(alias_lines)
+            result.extend(alias_asm_lines)
         else:
             raise AssemblyError(f'Unrecognized line {line}')
 
@@ -131,7 +136,7 @@ def fill_branch_argument(asm_lines: List[AsmLine]) -> List[AsmLine]:
     min_offset = -(1 << 7)
     result = asm_lines.copy()
 
-    i = 1
+    i = 0
 
     while i < len(result):
         asm_line = result[i]
@@ -174,6 +179,21 @@ def fill_addresses(asm_lines: List[AsmLine]) -> List[AsmLine]:
     return result
 
 
+def fill_immediates(asm_lines: List[AsmLine]) -> List[AsmLine]:
+    result = asm_lines.copy()
+
+    for asm_line in result:
+        if asm_line.argument is not None and asm_line.argument.is_label():
+            label_index = find_label_index(result, asm_line.argument.label)
+
+            if label_index > 16:
+                raise AssemblyError(f'Unsupported argument label {asm_line} with index {label_index}.')
+
+            asm_line.argument = Argument.from_immediate(label_index)
+
+    return result
+
+
 def assemble(asm_code: List[str]) -> List[int]:
     lines = remove_comments(asm_code)
     lines = remove_empty(lines)
@@ -182,16 +202,24 @@ def assemble(asm_code: List[str]) -> List[int]:
     prefixed_asm_lines = prefix_positive_branch(prefixed_asm_lines)
     addressed_asm_lines = fill_addresses(prefixed_asm_lines)
     argumented_asm_lines = fill_branch_argument(addressed_asm_lines)
+    argumented_asm_lines = fill_immediates(argumented_asm_lines)
 
     return to_machine_code(argumented_asm_lines)
 
 
 def to_hex(machine_code: List[int]) -> List[str]:
-    return [f'{opcode:02x}' for opcode in machine_code]
+    return [f'{opcode:02X}' for opcode in machine_code]
+
+
+def group_code(str_list: List[str], group_size: int = 16) -> List[str]:
+    groups = split_list(str_list, group_size)
+    return [' '.join(group) for group in groups]
 
 
 if __name__ == '__main__':
     asm_filepath = sys.argv[1]
     asm_code = read_file_lines(asm_filepath)
     machine_code = assemble(asm_code)
-    write_file('out.txt', to_hex(machine_code))
+    hex_code = to_hex(machine_code)
+    grouped_code = group_code(hex_code)
+    write_file('out.txt', grouped_code)

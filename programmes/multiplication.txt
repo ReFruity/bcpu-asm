@@ -1,21 +1,2 @@
-BR .start
-.result
-DATA 0
-.a
-DATA 3
-.b
-DATA 23
-.start
-LDAM .result
-LDBM .b
-ADD
-STAM .result
-LDAM .a
-LDBC 1
-SUB
-STAM .a
-BRZ .end
-BR .start
-.end
-LDAM .result
-HALT
+93 00 03 17 01 13 D0 21 02 41 E0 22 A2 FF 95 01
+FF 9E

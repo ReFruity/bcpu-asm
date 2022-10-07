@@ -1,9 +1,23 @@
-from unittest import TestCase
-
 from asm import parse_asm_lines, prefix_negative_branch, prefix_positive_branch, high_four_bits, low_four_bits, \
-    find_label_index, fill_addresses, fill_branch_argument
-from asm_line import AsmLine
+    fill_addresses, fill_branch_argument, fill_immediates
+from asm_line import Argument, AsmLine
 
+
+def test_parse_asm_lines():
+    actual = parse_asm_lines([
+        '.start',
+        'LDAM 1',
+        'DATA 2',
+        'HALT',
+    ])
+
+    assert len(actual) == 4
+    expected_asm_line_0 = AsmLine.from_instruction('LDAM', Argument.from_immediate(1))
+    expected_asm_line_0.label = '.start'
+    assert actual[0] == expected_asm_line_0
+    assert actual[1] == AsmLine.from_data(2)
+    assert actual[2] == AsmLine.from_instruction('PFIX', Argument.from_immediate(15))
+    assert actual[3] == AsmLine.from_instruction('BR', Argument.from_immediate(14))
 
 def test_prefix_negative_branch():
     asm_lines = parse_asm_lines([
@@ -98,18 +112,6 @@ def test_low_four_bits():
 
 def test_fill_branch_argument():
     input_lines = [
-        '.start',
-        'BR .middle',
-        'BR .end',
-        *['DATA 0'] * 14,
-        '.middle',
-        'LDAM 0',
-        'DATA 0',
-        'BR .end',
-        '.end',
-        'BR .start',
-    ]
-    input_lines = [
         'PFIX 0',
         '.start',
         'BR .end',
@@ -121,19 +123,26 @@ def test_fill_branch_argument():
         'BR .start',
     ]
     asm_lines = parse_asm_lines(input_lines)
-    # asm_lines = prefix_negative_branch(asm_lines)
-    # asm_lines = prefix_positive_branch(asm_lines)
-    # asm_lines = fill_addresses(asm_lines)
     actual = fill_branch_argument(asm_lines)
-    print()
-    print('test_fill_branch_argument:')
-    print(actual)
 
     assert actual[0].argument.immediate == 0x1
     assert actual[1].argument.immediate == 0x2
     assert actual[18].argument.immediate == 0x1
     assert actual[20].argument.immediate == 0xE
     assert actual[21].argument.immediate == 0xB
+
+
+def test_fill_branch_argument_short():
+    input_lines = [
+        'BR .end',
+        'DATA 0',
+        '.end',
+        'LDAM 1',
+    ]
+    asm_lines = parse_asm_lines(input_lines)
+    actual = fill_branch_argument(asm_lines)
+
+    assert actual[0].argument.immediate == 0x1
 
 
 def test_fill_addresses():
@@ -148,3 +157,15 @@ def test_fill_addresses():
     assert len(actual) == 2
     assert actual[0].address == 0
     assert actual[1].address == 1
+
+
+def test_fill_immediates():
+    asm_lines = parse_asm_lines([
+        '.start',
+        'LDAM .start',
+    ])
+
+    actual = fill_immediates(asm_lines)
+
+    assert len(actual) == 1
+    assert actual[0].argument.immediate == 0
