@@ -2,7 +2,6 @@ from unittest import TestCase
 
 from asm import parse_asm_lines, prefix_negative_branch, prefix_positive_branch, high_four_bits, low_four_bits, \
     fill_addresses, fill_branch_argument, fill_immediates
-from asm_line import Argument, AsmLine
 
 
 def assert_prefix_positive_branch(input_lines, expected_lines):
@@ -14,51 +13,6 @@ def assert_prefix_positive_branch(input_lines, expected_lines):
 
 
 class Test(TestCase):
-    def test_parse_asm_lines_instruction_arg(self):
-        actual = parse_asm_lines([
-            'LDAM 1',
-            'LDAM .start',
-            'LDAM .start + 1',
-        ])
-
-        assert len(actual) == 3
-        assert actual[0] == AsmLine.from_instruction('LDAM', Argument.from_immediate(1))
-        assert actual[1] == AsmLine.from_instruction('LDAM', Argument.from_label('.start'))
-        assert actual[2] == AsmLine.from_instruction('LDAM', Argument.from_label('.start + 1'))
-
-    def test_parse_asm_lines_data_arg(self):
-        actual = parse_asm_lines([
-            'DATA 2',
-            'DATA 0xF',
-            'DATA 0x12',
-            'DATA .start',
-            'DATA .start + 1',
-        ])
-
-        assert len(actual) == 5
-        assert actual[0] == AsmLine.from_data(Argument.from_immediate(2))
-        assert actual[1] == AsmLine.from_data(Argument.from_immediate(15))
-        assert actual[2] == AsmLine.from_data(Argument.from_immediate(18))
-        assert actual[3] == AsmLine.from_data(Argument.from_label('.start'))
-        assert actual[4] == AsmLine.from_data(Argument.from_label('.start + 1'))
-
-    def test_parse_asm_lines_labels(self):
-        actual = parse_asm_lines([
-            '.start',
-            'LDAM 1',
-            '.end',
-            'HALT',
-        ])
-
-        assert len(actual) == 3
-        expected_asm_line_0 = AsmLine.from_instruction('LDAM', Argument.from_immediate(1))
-        expected_asm_line_0.label = '.start'
-        assert actual[0] == expected_asm_line_0
-        expected_asm_line_1 = AsmLine.from_instruction('PFIX', Argument.from_immediate(15))
-        expected_asm_line_1.label = '.end'
-        assert actual[1] == expected_asm_line_1
-        assert actual[2] == AsmLine.from_instruction('BR', Argument.from_immediate(14))
-
     def test_prefix_negative_branch(self):
         asm_lines = parse_asm_lines([
             '.start',

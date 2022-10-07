@@ -147,7 +147,7 @@ def fill_immediates(asm_lines: List[AsmLine]) -> List[AsmLine]:
             if label_index > 16:
                 raise AssemblyError(f'Unsupported argument label {asm_line} with index {label_index}.')
 
-            asm_line.argument = Argument.from_immediate(label_index)
+            asm_line.argument = Argument.from_immediate(label_index + asm_line.argument.offset)
 
     return result
 

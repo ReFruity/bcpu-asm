@@ -18,5 +18,5 @@ MNEMONICS = [
 ]
 
 ALIASES = {
-    'HALT': ['PFIX F', 'BR E']
+    'HALT': ['PFIX 0xF', 'BR 0xE']
 }

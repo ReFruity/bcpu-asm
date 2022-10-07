@@ -29,22 +29,22 @@ SUB
 BRZ .increment_i
 .compare
 LDAM .j
-PFIX F
-LDAI F
+PFIX 0xF
+LDAI 0xF
 LDBM .j
 LDBI 0
 SUB
 BRN .increment_i
 .swap
 LDAM .j
-PFIX F
-LDAI F
+PFIX 0xF
+LDAI 0xF
 STAM .buffer
 LDAM .j
 LDAI 0
 LDBM .j
-PFIX F
-STAI F
+PFIX 0xF
+STAI 0xF
 LDAM .buffer
 LDBM .j
 STAI 0
