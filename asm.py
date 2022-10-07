@@ -1,5 +1,5 @@
 import sys
-from typing import List, Any
+from typing import List
 
 import instructions
 from asm_line import AsmLine, is_instruction, parse_argument, is_data, is_label, Argument, to_machine_code, is_alias
@@ -38,8 +38,12 @@ def is_relative_branch(mnemonic: str) -> bool:
     return mnemonic in ['BR', 'BRZ', 'BRN']
 
 
-def parse_data(line: str) -> int:
-    return int(line.split(' ')[1])
+def parse_data(line: str) -> Argument:
+    arg = line.split(' ')[1]
+    if is_label(arg):
+        return Argument.from_label(arg)
+    else:
+        return Argument.from_immediate(int(arg))
 
 
 def parse_asm_lines(lines: List[str]) -> List[AsmLine]:
@@ -66,6 +70,8 @@ def parse_asm_lines(lines: List[str]) -> List[AsmLine]:
         elif is_alias(line):
             alias_lines = instructions.ALIASES[line]
             alias_asm_lines = parse_asm_lines(alias_lines)
+            if label is not None:
+                alias_asm_lines[0].label = label
             result.extend(alias_asm_lines)
         else:
             raise AssemblyError(f'Unrecognized line {line}')
@@ -186,6 +192,7 @@ def fill_immediates(asm_lines: List[AsmLine]) -> List[AsmLine]:
         if asm_line.argument is not None and asm_line.argument.is_label():
             label_index = find_label_index(result, asm_line.argument.label)
 
+            # TODO: Lift limitation (also for BRB)
             if label_index > 16:
                 raise AssemblyError(f'Unsupported argument label {asm_line} with index {label_index}.')
 

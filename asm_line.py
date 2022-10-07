@@ -30,14 +30,11 @@ class Argument:
 
 
 class AsmLine:
-    data: int = None
+    is_data: bool = False
     mnemonic: str = None
     argument: Argument = None
     address: int = None
     label: str = None
-
-    def is_data(self) -> bool:
-        return self.data is not None
 
     def is_relative_branch(self) -> bool:
         return self.mnemonic in ['BR', 'BRZ', 'BRN']
@@ -50,9 +47,10 @@ class AsmLine:
         return asm_line
 
     @classmethod
-    def from_data(cls, data: int):
+    def from_data(cls, argument: Argument):
         asm_line = AsmLine()
-        asm_line.data = data
+        asm_line.argument = argument
+        asm_line.is_data = True
         return asm_line
 
     def __repr__(self) -> str:
@@ -61,15 +59,15 @@ class AsmLine:
         if self.label is not None:
             prefix = f'{self.label} '
 
-        if self.is_data():
-            asm_line_str = f'DATA {self.data}'
+        if self.is_data:
+            asm_line_str = f'DATA {self.argument}'
         else:
             asm_line_str = f'{self.mnemonic} {self.argument}'
 
         return f'{prefix}{asm_line_str}'
 
     def __eq__(self, other):
-        return self.data == other.data and \
+        return self.is_data == other.is_data and \
                self.mnemonic == other.mnemonic and \
                self.argument == other.argument and \
                self.address == other.address and \
@@ -77,7 +75,7 @@ class AsmLine:
 
     def __copy__(self):
         result = Argument()
-        result.data = self.data
+        result.is_data = self.is_data
         result.mnemonic = self.mnemonic
         result.argument = self.argument
         result.address = self.address
@@ -94,7 +92,7 @@ def parse_argument(instruction: str) -> Optional[Argument]:
         if is_label(argument):
             return Argument.from_label(argument)
         else:
-            return Argument.from_immediate(int(argument))
+            return Argument.from_immediate(int(argument, 16))
     else:
         return None
 
@@ -116,8 +114,8 @@ def is_alias(line: str) -> bool:
 
 
 def asm_line_to_int(asm_line: AsmLine) -> int:
-    if asm_line.is_data():
-        return asm_line.data
+    if asm_line.is_data:
+        return asm_line.argument.immediate
     else:
         opcode = instructions.MNEMONICS.index(asm_line.mnemonic)
         argument = 0 if asm_line.argument is None else asm_line.argument.immediate
