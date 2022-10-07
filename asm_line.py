@@ -1,11 +1,11 @@
-from typing import Optional
+from typing import Optional, List
 
 import instructions
 
 
 class Argument:
     label: str = None
-    value: int = None
+    immediate: int = None
 
     @classmethod
     def from_label(cls, label: str):
@@ -14,19 +14,19 @@ class Argument:
         return argument
 
     @classmethod
-    def from_value(cls, value: int):
+    def from_immediate(cls, immediate: int):
         argument = Argument()
-        argument.value = value
+        argument.immediate = immediate
         return argument
 
     def is_label(self) -> bool:
         return self.label is not None
 
     def __repr__(self) -> str:
-        return self.label if self.is_label() else str(self.value)
+        return self.label if self.is_label() else str(self.immediate)
 
     def __eq__(self, other):
-        return self.label == other.label and self.value == other.value
+        return self.label == other.label and self.immediate == other.immediate
 
 
 class AsmLine:
@@ -84,7 +84,7 @@ def parse_argument(instruction: str) -> Optional[Argument]:
         if is_label(argument):
             return Argument.from_label(argument)
         else:
-            return Argument.from_value(int(argument))
+            return Argument.from_immediate(int(argument))
     else:
         return None
 
@@ -99,3 +99,16 @@ def is_data(line: str) -> bool:
 
 def is_instruction(line: str) -> bool:
     return line.split(' ')[0] in instructions.MNEMONICS
+
+
+def asm_line_to_int(asm_line: AsmLine) -> int:
+    if asm_line.is_data():
+        return asm_line.data
+    else:
+        opcode = instructions.MNEMONICS.index(asm_line.mnemonic)
+        instruction = opcode << 4 + asm_line.argument.immediate
+        return instruction
+
+
+def to_machine_code(asm_lines: List[AsmLine]) -> List[int]:
+    return [asm_line_to_int(asm_line) for asm_line in asm_lines]

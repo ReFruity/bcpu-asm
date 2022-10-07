@@ -5,8 +5,8 @@ def test_parse_argument_empty():
     assert parse_argument('ADD') is None
 
 
-def test_parse_argument_value():
-    assert parse_argument('LDAM 12') == Argument.from_value(12)
+def test_parse_argument_immediate():
+    assert parse_argument('LDAM 12') == Argument.from_immediate(12)
 
 
 def test_parse_argument_label():
