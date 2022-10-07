@@ -8,6 +8,10 @@ class ParseError(Exception):
     pass
 
 
+def is_hex(argument: str) -> bool:
+    return argument.startswith('0x')
+
+
 def parse_argument(instruction: str) -> Optional[Argument]:
     split_instruction = instruction.split(' ')
 
@@ -16,7 +20,10 @@ def parse_argument(instruction: str) -> Optional[Argument]:
         if is_label(argument):
             return Argument.from_label(argument)
         else:
-            return Argument.from_immediate(int(argument, 16))
+            if is_hex(argument):
+                return Argument.from_immediate(int(argument[2:], 16))
+            else:
+                return Argument.from_immediate(int(argument, 10))
     else:
         return None
 
