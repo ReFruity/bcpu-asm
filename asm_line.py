@@ -83,45 +83,15 @@ class AsmLine:
 
         return result
 
-
-def parse_argument(instruction: str) -> Optional[Argument]:
-    split_instruction = instruction.split(' ')
-
-    if len(split_instruction) > 1:
-        argument = split_instruction[1]
-        if is_label(argument):
-            return Argument.from_label(argument)
+    def to_int(self) -> int:
+        if self.is_data:
+            return self.argument.immediate
         else:
-            return Argument.from_immediate(int(argument, 16))
-    else:
-        return None
+            opcode = instructions.MNEMONICS.index(self.mnemonic)
+            argument = 0 if self.argument is None else self.argument.immediate
+            instruction = (opcode << 4) + argument
+            return instruction
 
 
-def is_label(line: str) -> bool:
-    return line.startswith('.')
-
-
-def is_data(line: str) -> bool:
-    return line.startswith('DATA')
-
-
-def is_instruction(line: str) -> bool:
-    return line.split(' ')[0] in instructions.MNEMONICS
-
-
-def is_alias(line: str) -> bool:
-    return line in instructions.ALIASES.keys()
-
-
-def asm_line_to_int(asm_line: AsmLine) -> int:
-    if asm_line.is_data:
-        return asm_line.argument.immediate
-    else:
-        opcode = instructions.MNEMONICS.index(asm_line.mnemonic)
-        argument = 0 if asm_line.argument is None else asm_line.argument.immediate
-        instruction = (opcode << 4) + argument
-        return instruction
-
-
-def to_machine_code(asm_lines: List[AsmLine]) -> List[int]:
-    return [asm_line_to_int(asm_line) for asm_line in asm_lines]
+def asm_lines_to_machine_code(asm_lines: List[AsmLine]) -> List[int]:
+    return [asm_line.to_int() for asm_line in asm_lines]

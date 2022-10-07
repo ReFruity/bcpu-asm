@@ -19,14 +19,14 @@ def test_parse_asm_lines_instruction_arg():
 def test_parse_asm_lines_data_arg():
     actual = parse_asm_lines([
         'DATA 2',
-        'DATA F',
-        'DATA 12',
+        'DATA 0xF',
+        'DATA 0x12',
         'DATA .start',
         'DATA .start + 1',
     ])
 
     assert len(actual) == 5
-    assert actual[0] == AsmLine.from_data(Argument.from_immediate(1))
+    assert actual[0] == AsmLine.from_data(Argument.from_immediate(2))
     assert actual[1] == AsmLine.from_data(Argument.from_immediate(15))
     assert actual[2] == AsmLine.from_data(Argument.from_immediate(18))
     assert actual[3] == AsmLine.from_data(Argument.from_label('.start'))

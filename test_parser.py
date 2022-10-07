@@ -1,4 +1,5 @@
-from asm_line import parse_argument, Argument
+from asm_line import Argument
+from parser import parse_argument
 
 
 def test_parse_argument_empty():

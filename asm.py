@@ -1,8 +1,8 @@
 import sys
 from typing import List
 
-import instructions
-from asm_line import AsmLine, is_instruction, parse_argument, is_data, is_label, Argument, to_machine_code, is_alias
+from asm_line import AsmLine, Argument, asm_lines_to_machine_code
+from parser import parse_asm_lines
 from util import split_list
 
 
@@ -28,55 +28,6 @@ def write_file(filepath: str, lines: List[str]) -> None:
     with open(filepath, 'w') as file:
         for line in lines:
             file.write(f"{line}\n")
-
-
-def parse_mnemonic(instruction: str) -> str:
-    return instruction.split(' ')[0]
-
-
-def is_relative_branch(mnemonic: str) -> bool:
-    return mnemonic in ['BR', 'BRZ', 'BRN']
-
-
-def parse_data(line: str) -> Argument:
-    arg = line.split(' ')[1]
-    if is_label(arg):
-        return Argument.from_label(arg)
-    else:
-        return Argument.from_immediate(int(arg))
-
-
-def parse_asm_lines(lines: List[str]) -> List[AsmLine]:
-    result = []
-    label = None
-
-    for line in lines:
-        if is_instruction(line):
-            mnemonic = parse_mnemonic(line)
-            argument = parse_argument(line)
-            asm_line = AsmLine.from_instruction(mnemonic, argument)
-            if label is not None:
-                asm_line.label = label
-            result.append(asm_line)
-            label = None
-        elif is_data(line):
-            asm_line = AsmLine.from_data(parse_data(line))
-            if label is not None:
-                asm_line.label = label
-            result.append(asm_line)
-            label = None
-        elif is_label(line):
-            label = line
-        elif is_alias(line):
-            alias_lines = instructions.ALIASES[line]
-            alias_asm_lines = parse_asm_lines(alias_lines)
-            if label is not None:
-                alias_asm_lines[0].label = label
-            result.extend(alias_asm_lines)
-        else:
-            raise AssemblyError(f'Unrecognized line {line}')
-
-    return result
 
 
 def find_label_index(asm_lines: List[AsmLine], label: str) -> int:
@@ -211,7 +162,7 @@ def assemble(asm_code: List[str]) -> List[int]:
     argumented_asm_lines = fill_branch_argument(addressed_asm_lines)
     argumented_asm_lines = fill_immediates(argumented_asm_lines)
 
-    return to_machine_code(argumented_asm_lines)
+    return asm_lines_to_machine_code(argumented_asm_lines)
 
 
 def to_hex(machine_code: List[int]) -> List[str]:
