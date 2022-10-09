@@ -19,3 +19,7 @@ def split_list(list_to_split: List[Any], group_size: int) -> List[Any]:
     result.append(buffer)
 
     return result
+
+
+def is_bit_set(byte: int, bit_address: int) -> bool:
+    return (byte >> bit_address) % 2 == 1

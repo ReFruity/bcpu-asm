@@ -2,3 +2,5 @@
 *.pyc
 programmes/out.txt
 programmes/test.s
+schems/barrel15.schem
+schems/modified.schem
