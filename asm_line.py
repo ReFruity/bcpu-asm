@@ -48,6 +48,20 @@ class AsmLine:
     def is_relative_branch(self) -> bool:
         return self.mnemonic in ['BR', 'BRZ', 'BRN']
 
+    def is_non_relative_branch(self) -> bool:
+        return self.mnemonic in [
+            'LDAM',
+            'LDBM',
+            'STAM',
+            'LDAC',
+            'LDBC',
+            'LDAP',
+            'LDAI',
+            'LDBI',
+            'STAI',
+            'BRB',
+        ]
+
     @classmethod
     def from_instruction(cls, mnemonic: str, argument: Argument):
         asm_line = AsmLine()
@@ -100,6 +114,9 @@ class AsmLine:
             argument = 0 if self.argument is None else self.argument.immediate
             instruction = (opcode << 4) + argument
             return instruction
+
+    def is_prefix(self) -> bool:
+        return self.mnemonic == 'PFIX'
 
 
 def asm_lines_to_machine_code(asm_lines: List[AsmLine]) -> List[int]:

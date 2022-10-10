@@ -37,7 +37,31 @@ def find_label_index(asm_lines: List[AsmLine], label: str) -> int:
             return i
 
 
-def prefix_positive_branch(asm_lines: List[AsmLine]) -> List[AsmLine]:
+def prefix_non_relative_branch(asm_lines: List[AsmLine]) -> List[AsmLine]:
+    result = asm_lines.copy()
+
+    i = 0
+
+    while i < len(result):
+        asm_line = result[i]
+
+        if asm_line.is_non_relative_branch() and asm_line.argument.is_label():
+            if asm_line.is_prefix():
+                raise AssemblyError(f'Unsupported PFIX with label argument at line number {i + 1}.')
+
+            label_index = find_label_index(result, asm_line.argument.label)
+            if label_index > 0xF:
+                argument = Argument.from_immediate(0)
+                pfix = AsmLine.from_instruction('PFIX', argument)
+                result.insert(i, pfix)
+                i += 1
+
+        i += 1
+
+    return result
+
+
+def prefix_positive_relative_branch(asm_lines: List[AsmLine]) -> List[AsmLine]:
     result = asm_lines.copy()
 
     i = len(result) - 1
@@ -58,7 +82,7 @@ def prefix_positive_branch(asm_lines: List[AsmLine]) -> List[AsmLine]:
     return result
 
 
-def prefix_negative_branch(asm_lines: List[AsmLine]) -> List[AsmLine]:
+def prefix_negative_relative_branch(asm_lines: List[AsmLine]) -> List[AsmLine]:
     result = asm_lines.copy()
 
     i = 0
@@ -88,7 +112,50 @@ def low_four_bits(offset: int) -> int:
     return offset & 0b1111
 
 
-def fill_branch_argument(asm_lines: List[AsmLine]) -> List[AsmLine]:
+def fill_addresses(asm_lines: List[AsmLine]) -> List[AsmLine]:
+    result = asm_lines.copy()
+
+    for i in range(len(result)):
+        asm_line = result[i]
+        asm_line.address = i
+
+    return result
+
+
+def fill_absolute_immediates(asm_lines: List[AsmLine]) -> List[AsmLine]:
+    result = asm_lines.copy()
+
+    i = 0
+
+    while i < len(result):
+        asm_line = result[i]
+
+        if asm_line.is_non_relative_branch() and asm_line.argument.is_label():
+            label_index = find_label_index(result, asm_line.argument.label)
+            label_address = label_index + asm_line.argument.offset
+
+            if label_address > 255:
+                raise AssemblyError(f'Error in line {i + 1}: {asm_line}. Only 0-255 addresses are supported in 8-bit BCPU architecture.')
+
+            prefix_arg_immediate = high_four_bits(label_address)
+
+            if prefix_arg_immediate != 0:
+                prefix_line = result[i - 1]
+                if prefix_line.mnemonic != 'PFIX':
+                    raise AssemblyError(f'Line {prefix_line} before line {asm_line} with number {asm_line.address + 1} should be PFIX.')
+                prefix_arg = Argument.from_immediate(high_four_bits(label_address))
+                prefix_line.argument = prefix_arg
+
+            instruction_arg_immediate = low_four_bits(label_address)
+            instruction_arg = Argument.from_immediate(instruction_arg_immediate)
+            asm_line.argument = instruction_arg
+
+        i += 1
+
+    return result
+
+
+def fill_relative_immediates(asm_lines: List[AsmLine]) -> List[AsmLine]:
     max_offset = (1 << 7) - 1
     min_offset = -(1 << 7)
     result = asm_lines.copy()
@@ -103,17 +170,17 @@ def fill_branch_argument(asm_lines: List[AsmLine]) -> List[AsmLine]:
             offset = label_index - (i + 1)
 
             if offset < min_offset:
-                raise AssemblyError(f'Relative offset {offset} for line {asm_line} with number {asm_line.address} is less than {min_offset}.')
+                raise AssemblyError(f'Relative offset {offset} for line {asm_line} with number {asm_line.address + 1} is less than {min_offset}.')
 
             if offset > max_offset:
-                raise AssemblyError(f'Relative offset {offset} for line {asm_line} with number {asm_line.address} is more than {max_offset}.')
+                raise AssemblyError(f'Relative offset {offset} for line {asm_line} with number {asm_line.address + 1} is more than {max_offset}.')
 
             prefix_arg_immediate = high_four_bits(offset)
 
             if prefix_arg_immediate != 0:
                 prefix_line = result[i - 1]
                 if prefix_line.mnemonic != 'PFIX':
-                    raise AssemblyError(f'Line {prefix_line} before line {asm_line} with number {asm_line.address} should be PFIX.')
+                    raise AssemblyError(f'Line {prefix_line} before line {asm_line} with number {asm_line.address + 1} should be PFIX.')
                 prefix_arg = Argument.from_immediate(high_four_bits(offset))
                 prefix_line.argument = prefix_arg
 
@@ -126,28 +193,25 @@ def fill_branch_argument(asm_lines: List[AsmLine]) -> List[AsmLine]:
     return result
 
 
-def fill_addresses(asm_lines: List[AsmLine]) -> List[AsmLine]:
+def fill_data_immediates(asm_lines: List[AsmLine]) -> List[AsmLine]:
     result = asm_lines.copy()
 
-    for i in range(len(result)):
+    i = 0
+
+    while i < len(result):
         asm_line = result[i]
-        asm_line.address = i
 
-    return result
-
-
-def fill_immediates(asm_lines: List[AsmLine]) -> List[AsmLine]:
-    result = asm_lines.copy()
-
-    for asm_line in result:
-        if asm_line.argument is not None and asm_line.argument.is_label():
+        if asm_line.is_data and asm_line.argument.is_label():
             label_index = find_label_index(result, asm_line.argument.label)
+            label_address = label_index + asm_line.argument.offset
 
-            # TODO: Lift limitation (also for BRB)
-            if label_index > 16:
-                raise AssemblyError(f'Unsupported argument label {asm_line} with index {label_index}.')
+            if label_address > 255:
+                raise AssemblyError(f'Error in line {i + 1}: {asm_line}. Only 0-255 addresses are supported in 8-bit BCPU architecture.')
 
-            asm_line.argument = Argument.from_immediate(label_index + asm_line.argument.offset)
+            instruction_arg = Argument.from_immediate(label_address)
+            asm_line.argument = instruction_arg
+
+        i += 1
 
     return result
 
@@ -156,11 +220,13 @@ def assemble(asm_code: List[str]) -> List[int]:
     lines = remove_comments(asm_code)
     lines = remove_empty(lines)
     asm_lines = parse_asm_lines(lines)
-    prefixed_asm_lines = prefix_negative_branch(asm_lines)
-    prefixed_asm_lines = prefix_positive_branch(prefixed_asm_lines)
+    prefixed_asm_lines = prefix_non_relative_branch(asm_lines)
+    prefixed_asm_lines = prefix_negative_relative_branch(prefixed_asm_lines)
+    prefixed_asm_lines = prefix_positive_relative_branch(prefixed_asm_lines)
     addressed_asm_lines = fill_addresses(prefixed_asm_lines)
-    argumented_asm_lines = fill_branch_argument(addressed_asm_lines)
-    argumented_asm_lines = fill_immediates(argumented_asm_lines)
+    argumented_asm_lines = fill_absolute_immediates(addressed_asm_lines)
+    argumented_asm_lines = fill_relative_immediates(argumented_asm_lines)
+    argumented_asm_lines = fill_data_immediates(argumented_asm_lines)
 
     return asm_lines_to_machine_code(argumented_asm_lines)
 
