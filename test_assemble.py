@@ -8,8 +8,8 @@ def assert_programme(programme_name):
     machine_code = assemble(asm_code)
     hex_code = to_hex(machine_code)
     groupped_code = group_code(hex_code)
-    actual_code = '\n'.join(groupped_code) + '\n'
-    expected_code = open(f'programmes/{programme_name}.txt').read()
+    actual_code = '\n'.join(groupped_code)
+    expected_code = open(f'programmes/{programme_name}.txt').read().strip()
 
     assert actual_code == expected_code
 
