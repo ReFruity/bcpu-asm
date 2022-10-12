@@ -1,38 +1,38 @@
 BR .start
 
 .swapped
-DATA 0
+DATA 1
 .i
 DATA .array - 1
 .buffer
 DATA 0
 .array
 DATA 4
-DATA 1
+DATA 3
 DATA 3
 DATA 5
-.array_end
 DATA 2
 
 .start
+LDAM .swapped
+BRZ .end
+
 LDAC 0
 STAM .swapped
+LDAC .array - 1
+STAM .i
 
 .loop
 LDAM .i
 LDBC 1
 ADD
 STAM .i
-LDAI 0
+LDAI 1
 LDBM .i
-LDBI 1
+LDBI 0
 SUB
 BRN .swap
-
-LDAM .i
-LDBM .array_end
-SUB
-BRZ .start
+BR .loop_end
 
 .swap
 # BX = array[i+1]
@@ -52,10 +52,13 @@ LDAM .buffer
 STAI 1
 LDAC 1
 STAM .swapped
-BR .loop
 
-LDAM .swapped
+.loop_end
+LDAM .i
+LDBC .start - 2
+SUB
 BRZ .start
+BR .loop
 
 .end
 HALT
